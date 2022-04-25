@@ -7,7 +7,7 @@ library(htmltab)
 library(digest)
 source("./DButils.R")
 
-con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
+con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero", port=3307)
 
 # General Setup
 POOL_NAME <- "Solopool"
@@ -39,6 +39,23 @@ rm(minedBlocks)
 # Subset to blocks that are currently unknown
 blockList <- blockList[blockList$height>lastKnownBlock,]
 
+if(nrow(blockList)>0){
+  blockList$shares <- NULL
+  blockList$orphan <- NULL
+  blockList$geo <- NULL
+  blockList$worker <- NULL
+  blockList$shareDifficulty <- NULL
+  blockList$minerShares <- NULL
+  blockList$timestamp <- as.POSIXct(blockList$timestamp, origin="1970-01-01", tz="GMT")
+  blockList$reward <- as.numeric(blockList$reward)/10^18
+  
+  names(blockList) <- c("Height", "Hash", "Date", "Difficulty", "Miner", "Reward")
+  blockList$Timestamp <- Sys.time()
+  blockList$Pool <- POOL_NAME
+  blockList <- blockList[complete.cases(blockList),]
+  mysql_fast_db_write_table(con, "block",blockList, append = TRUE)
+  
+}
 
 # Step 2: Retrieve active Miners
 activeMiners <- fromJSON(ACTIVEMINER_ENDPOINT)
@@ -154,19 +171,6 @@ payoutTransactions <- data.frame(TxHash = unique(paymentList$tx), Pool = POOL_NA
 names(paymentList) <- c("Timestamp", "TxHash", "Amount", "Miner")
 paymentList$Amount <- paymentList$Amount/10^12
 
-blockList$shares <- NULL
-blockList$orphan <- NULL
-blockList$geo <- NULL
-blockList$worker <- NULL
-blockList$shareDifficulty <- NULL
-blockList$minerShares <- NULL
-blockList$timestamp <- as.POSIXct(blockList$timestamp, origin="1970-01-01", tz="GMT")
-blockList$reward <- as.numeric(blockList$reward)/10^18
-
-names(blockList) <- c("Height", "Hash", "Date", "Difficulty", "Miner", "Reward")
-blockList$Timestamp <- Sys.time()
-blockList$Pool <- POOL_NAME
-blockList <- blockList[complete.cases(blockList),]
 
 # Step 5: Retrieve Payouts
 payouts <- fromJSON(PAYMENT_ENDPOINT)
@@ -199,5 +203,4 @@ mysql_fast_db_write_table(con, "worker",workerList, append = TRUE)
 mysql_fast_db_write_table(con, "hashrate",hashList, append = TRUE)
 mysql_fast_db_write_table(con, "payouttransaction",payoutTransactions, append = TRUE)
 mysql_fast_db_write_table(con, "payout",paymentList, append = TRUE)
-mysql_fast_db_write_table(con, "block",blockList, append = TRUE)
 dbDisconnect(con)
