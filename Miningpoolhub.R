@@ -1,4 +1,4 @@
-setwd("/home/jochen/Poolscraper")
+setwd("/home/jochen/MoneroPoolScraper")
 library(DBI)
 library(htmltab)
 source("./DButils.R")
