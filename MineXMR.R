@@ -29,7 +29,7 @@ minedBlocks <- strsplit(minedBlocks,":")
 # Drop pending and orphaned blocks
 minedBlocks <- minedBlocks[-which(lengths(minedBlocks)==6)]
 
-minedBlocks <- lapply(minedBlocks, function(x) data.frame(t(x)))
+minedBlocks <- lapply(minedBlocks, function(x) data.frame(t(x), stringsAsFactors = FALSE))
 minedBlocks <- bind_rows(minedBlocks)
 minedBlocks <- minedBlocks[,-c(5,6)]
 names(minedBlocks) <- c("Height", "Hash", "Date", "Difficulty","Reward")
