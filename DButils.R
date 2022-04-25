@@ -1,7 +1,7 @@
 # Login Credentials
 
-DB_USERNAME <- ""
-DB_PW <- ""
+DB_USERNAME <- "root"
+DB_PW <- "ddjFTW!"
 
 # Workaround because of slow DB Writes
 # https://github.com/r-dbi/RMariaDB/issues/162#issuecomment-689045252

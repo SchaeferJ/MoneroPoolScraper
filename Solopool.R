@@ -7,7 +7,7 @@ library(htmltab)
 library(digest)
 source("./DButils.R")
 
-con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero", port=3307)
+con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
 
 # General Setup
 POOL_NAME <- "Solopool"
