@@ -13,6 +13,7 @@ POOL_URL <- "https://minexmr.com"
 
 # Define API-Endpoints to query
 BLOCKS_ENDPOINT <- "https://minexmr.com/api/main/pool/blocks/day?"
+PAYMENTS_ENDPOINT <- "https://minexmr.com/api/main/user/payments?27524743=&address=%s&page=%i"
 
 # Rate Limit (Max API Hits per Minute)
 RATE_LIMIT <- 6.5 # 100 per 15 Minutes
@@ -44,4 +45,29 @@ minedBlocks <- minedBlocks[minedBlocks$Height>lastKnownBlock,]
 if(nrow(minedBlocks)>0){
   mysql_fast_db_write_table(con, "block",minedBlocks, append = TRUE)
 }
+
+# Try to find additional information by retrieving info for all knonw miners (some of them might be active
+# on this pool too)
+
+paymentList <- list()
+knownMiners <- get_totalminers()
+
+i <- 0
+for(m in knownMiners$Address){
+  j <- 0
+  while(TRUE){
+    minerPayments <- fromJSON(sprintf(PAYMENTS_ENDPOINT,m,j))
+    if(minerPayments[["total"]]==0){
+      break()
+    }
+    paymentList[[i]] <- process_paymentstring_minexmr(resp[["payments"]])
+    i <- i+1
+    if(j==minerPayments[["pageCount"]]-1){
+      break()
+    }
+    j <- j+1
+  }
+
+}
+
 dbDisconnect(con)
