@@ -7,7 +7,7 @@ source("./DButils.R")
 source("./ParseUtils.R")
 
 
-con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero", port=3307)
+con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
 
 # General Setup
 POOL_NAME <- "Crypto-Pool.fr"
