@@ -7,7 +7,7 @@ source("./DButils.R")
 source("./ParseUtils.R")
 
 
-con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
+con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero", port=3307)
 
 # General Setup
 POOL_NAME <- "Crypto-Pool.fr"
@@ -66,7 +66,7 @@ blockList$Maturity <- NULL
 
 blockList <- blockList[blockList$Height>lastKnownBlock,]
 if(nrow(blockList)>0){
-  blockList <- blockList[,c("Hash", "Date", "Difficulty","Pool","Timestamp","Reward")]
+  blockList <- blockList[,c("Height","Hash", "Date", "Difficulty","Pool","Timestamp","Reward")]
   mysql_fast_db_write_table(con, "block",blockList, append = TRUE)
 }
 

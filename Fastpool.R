@@ -66,7 +66,7 @@ blockList$Maturity <- NULL
 
 blockList <- blockList[blockList$Height>lastKnownBlock,]
 if(nrow(blockList)>0){
-  blockList <- blockList[,c("Hash", "Date", "Difficulty","Pool","Timestamp","Reward")]
+  blockList <- blockList[,c("Height","Hash", "Date", "Difficulty","Pool","Timestamp","Reward")]
   mysql_fast_db_write_table(con, "block",blockList, append = TRUE)
 }
 
