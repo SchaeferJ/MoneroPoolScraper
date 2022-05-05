@@ -15,6 +15,8 @@ POOL_URL <- "https://www.hashvault.pro/"
 # Define API-Endpoints to query
 BLOCKS_ENDPOINT <- "https://api.hashvault.pro/v3/monero/pool/blocks?limit=%i&page=%i&pooltype=collective"
 PAYMENT_ENDPOINT <- "https://api.hashvault.pro/v3/monero/pool/payments?limit=%i&page=%i"
+MINER_ENDPOINT <- "https://api.hashvault.pro/v3/monero/wallet/%s/stats?chart=total&inactivityThreshold=10&order=name&period=daily&poolType=false&workers=true"
+PAYOUT_ENDPOINT <- "https://api.hashvault.pro/v3/monero/wallet/%s/payments?limit=50&page=%i"
 
 
 # Rate Limit (Max API Hits per Minute)
@@ -101,7 +103,7 @@ if(nrow(blockList)>0){
 
 
 
-if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
+if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")|TRUE){
   totalMiners <- get_totalminers()
   minerList <- list()
   payoutList <- list()
