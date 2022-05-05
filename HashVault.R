@@ -99,4 +99,92 @@ if(nrow(blockList)>0){
   mysql_fast_db_write_table(con, "block",blockList, append = TRUE)
 }
 
+
+
+if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
+  totalMiners <- get_totalminers()
+  minerList <- list()
+  payoutList <- list()
+  minersFound <- 1
+  payoutsFound <- 1
+  
+  for(m in totalMiners$Address){
+    minerDetails <- fromJSON(sprintf(MINER_ENDPOINT, m))
+    Sys.sleep((RATE_LIMIT/60)+1)
+    if("error" %in% names(minerDetails)){
+      next()
+    }
+    if(minerDetails[["collective"]][["lastShare"]] != 0 | minerDetails[["solo"]][["lastShare"]] != 0){
+      
+      minerList[[minersFound]] <- data.frame(Address=m, Pool = POOL_NAME, Balance = minerDetails[["revenue"]][["confirmedBalance"]],
+                                             UncoBalance = sum(minerDetails[["revenue"]][["unconfirmedBalance"]][["collective"]][["total"]],
+                                                               minerDetails[["revenue"]][["unconfirmedBalance"]][["solo"]][["total"]]),
+                                             TotalPayout = minerDetails[["revenue"]][["totalPaid"]],
+                                             BlocksFound = sum(minerDetails[["collective"]][["foundBlocks"]], minerDetails[["solo"]][["foundBlocks"]]),
+                                             Timestamp = Sys.time(), stringsAsFactors = FALSE)
+      
+      minersFound <- minersFound + 1
+      Sys.sleep((60/RATE_LIMIT)+1)
+      
+      if(minerDetails[["revenue"]][["totalPaymentsSent"]]>0){
+        page <- 0
+        while (TRUE) {
+          minerPayouts <- fromJSON(sprintf(PAYOUT_ENDPOINT,m,page))
+          if(length(minerPayouts) == 0 || nrow(minerPayouts)==0){
+            break()
+          }
+          minerPayouts$Miner <- m
+          minerPayouts$Timestamp <- Sys.time()
+          payoutList[[payoutsFound]] <- minerPayouts
+          payoutsFound <- payoutsFound + 1
+          page <- page + 1
+          Sys.sleep((60/RATE_LIMIT)+1)
+          
+        }
+        
+      }
+    }
+  }
+  
+  minerList <- bind_rows(minerList)
+  payoutList <- bind_rows(payoutList)
+  
+  minerList$Balance <- as.numeric(as.character(minerList$Balance))/10^12
+  minerList$UncoBalance <- as.numeric(as.character(minerList$UncoBalance))/10^12
+  minerList$TotalPayout <- as.numeric(as.character(minerList$TotalPayout))/10^12
+  
+  payoutList$ts <- as.POSIXct(payoutList$ts, origin="1970-01-01", tz="GMT")
+  payoutList$amount <- as.numeric(as.character(payoutList$amount))/10^12
+  payoutList$paidFee <- as.numeric(as.character(payoutList$paidFee))/10^12
+  
+  names(payoutList) <- c("Date", "Amount", "Fee", "TxHash", "TransactionKey", "Mixin", "Miner", "Timestamp")
+  
+  payoutTransactions <- payoutList[,c("TxHash", "Date", "Mixin", "TransactionKey", "Timestamp")]
+  payoutTransactions$Pool <- POOL_NAME
+  payoutTransactions <- payoutTransactions[!duplicated(payoutTransactions$TxHash),]
+  
+  payoutList <- payoutList[,c("TxHash", "Miner", "Amount")]
+  
+  knownMiners <- get_poolminers(POOL_NAME)
+  knownPayoutTxs <- get_poolpayouttx(POOL_NAME)
+  knownPayouts <- get_poolpayouts(POOL_NAME)
+  
+  minerList <- minerList[!minerList$Address %in% knownMiners$Address, ]
+  payoutTransactions <- payoutTransactions[!payoutTransactions$TxHash %in% knownPayoutTxs$TxHash,]
+  payoutList <- payoutList[!paste0(payoutList$TxHash, payoutList$Miner) %in% paste0(knownPayouts$TxHash, knownPayouts$Miner),]
+  
+  if(nrow(minerList)>0){
+    mysql_fast_db_write_table(con, "miner",minerList, append = TRUE)
+  }
+  
+  if(nrow(payoutTransactions)>0){
+    mysql_fast_db_write_table(con, "payouttransaction",payoutTransactions, append = TRUE)
+  }
+  
+  if(nrow(payoutList)>0){
+    mysql_fast_db_write_table(con, "payout",payoutList, append = TRUE)
+  }
+  
+}
+
 dbDisconnect(con)
