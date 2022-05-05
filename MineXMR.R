@@ -4,6 +4,7 @@ library(DBI)
 library(dplyr)
 library(R.utils)
 source("./DButils.R")
+source("./ParseUtils.R")
 
 con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
 
@@ -49,6 +50,7 @@ if(nrow(minedBlocks)>0){
 # Try to find additional information by retrieving info for all knonw miners (some of them might be active
 # on this pool too)
 
+if(FALSE){
 paymentList <- list()
 knownMiners <- get_totalminers()
 
@@ -69,5 +71,5 @@ for(m in knownMiners$Address){
   }
 
 }
-
+}
 dbDisconnect(con)

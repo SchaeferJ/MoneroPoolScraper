@@ -27,3 +27,11 @@ process_paymentstring <- function(paymentstring, skip=0){
   payments$Date <- paymentDates
   return(payments)
 }
+
+process_paymentstring_minexmr <- function(paymentstring, skip=0){
+  payments <- strsplit(paymentstring, ":")
+  payments <- lapply(payments, function(x) data.frame(t(x), stringsAsFactors = FALSE))
+  payments <- bind_rows(payments)
+  names(payments) <- c("Date", "TxHash", "Amount", "Fee", "UNK")
+  return(payments)
+}

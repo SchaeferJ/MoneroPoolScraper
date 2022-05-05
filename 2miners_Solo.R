@@ -128,6 +128,8 @@ hashList <- bind_rows(hashList)
 paymentList <- bind_rows(paymentList)
 
 minerList$TotalPayout <- minerList$TotalPayout/10^12
+minerList$Balance <- minerList$Balance/10^12
+minerList$Timestamp <- Sys.time()
 
 workerList$offline <- NULL
 names(workerList) <- c("LastShare", "Hashrate", "H1", "WorkerID", "Miner", "Timestamp" )
