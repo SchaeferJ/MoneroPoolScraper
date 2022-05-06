@@ -149,16 +149,19 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
   workerList <- bind_rows(workerList)
   payoutList <- bind_rows(payoutList)
   
-  workerList <- workerList[,c("workerId", "lastShare", "Miner", "Timestamp")]
-  workerList$Pool <- POOL_NAME
-  names(workerList)[c(1,2)] <- c("WorkerID", "LastShare")
-  # Fake UID for Workers
-  uids <- paste0(workerList$Miner, workerList$WorkerID, POOL_NAME)
-  uids <- abs(digest2int(uids))
-  if(sum(duplicated(uids))>0) stop("FATAL: Hash collision!")
-  uids <- uids + POOL_ID * 10^nchar(uids)
-  workerList$UID <- uids
-  
+  if(nrow(workerList)>0){
+    workerList <- workerList[,c("workerId", "lastShare", "Miner", "Timestamp")]
+    workerList$Pool <- POOL_NAME
+    names(workerList)[c(1,2)] <- c("WorkerID", "LastShare")
+    # Fake UID for Workers
+    uids <- paste0(workerList$Miner, workerList$WorkerID, POOL_NAME)
+    uids <- abs(digest2int(uids))
+    if(sum(duplicated(uids))>0) stop("FATAL: Hash collision!")
+    uids <- uids + POOL_ID * 10^nchar(uids)
+    workerList$UID <- uids
+    workerList <- workerList[!workerList$UID %in% knownWorkers$UID,]
+    
+  }
   payoutList$Date <- as.POSIXct(as.numeric(payoutList$Date), origin="1970-01-01", tz="GMT")
   payoutList$Amount <- as.numeric(as.character(payoutList$Amount))/10^12
   
@@ -171,7 +174,6 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
   knownPayouts <- get_poolpayouts(POOL_NAME)
   
   minerList <- minerList[!minerList$Address %in% knownMiners$Address,]
-  workerList <- workerList[!workerList$UID %in% knownWorkers$UID,]
   payoutTransactions <- payoutTransactions[!payoutTransactions$TxHash %in% knownPayoutTx$TxHash]
   payouts <- payouts[!paste0(payouts$TxHash,payouts$Miner) %in% paste0(knownPayouts$TxHash, knownPayouts$Miner)]
   
@@ -190,7 +192,7 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
   if(nrow(payouts)>0){
     mysql_fast_db_write_table(con, "payout",minerList, append = TRUE)
   }
-  }
+}
 
 
 dbDisconnect(con)

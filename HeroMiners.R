@@ -12,14 +12,14 @@ con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="
 # General Setup
 POOL_NAME <- "HeroMiners"
 POOL_URL <- "https://monero.herominers.com"
-
+POOL_ID <- 6 # For Worker UIDS
 
 # Define API-Endpoints to query
 STATS_ENDPOINT <- "https://monero.herominers.com/api/live_stats"
 BLOCKS_ENDPOINT <- "https://monero.herominers.com/api/get_blocks?height="
 PAYMENT_ENDPOINT <- "https://monero.herominers.com/api/get_payments?time="
-
-
+MINER_ENDPOINT <- "https://monero.herominers.com/api/stats_address?address=%s&longpoll=false"
+PAYOUT_ENDPOINT <- "https://monero.herominers.com/api/get_payments?time=%i&address=%s"
 
 # Rate Limit (Max API Hits per Minute)
 RATE_LIMIT <- 30
@@ -105,6 +105,101 @@ if(nrow(paymentList)>0){
   
 }
 
+if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
+  totalMiners <- get_totalminers()
+  minerList <- list()
+  minersFound <- 1
+  
+  workerList <- list()
+  workersFound <- 1
+  
+  payoutList <- list()
+  payoutsFound <- 1
+  for(m in totalMiners$Address){
+    minerDetails <- fromJSON(sprintf(MINER_ENDPOINT,m))
+    Sys.sleep((60/RATE_LIMIT)+1)
+    if(!"error" %in% names(minerDetails) && length(minerDetails) == 3){
+      minerList[[minersFound]] <- data.frame(Address = m, Pool = POOL_NAME, 
+                                             Balance = as.numeric(as.character(minerDetails[["stats"]][["balance"]]))/10^12,
+                                             Timestamp = Sys.time(), stringsAsFactors = FALSE)
+      minersFound <- minersFound + 1
+      if(length(minerDetails[["perWorkerStats"]])>0){
+        workerDetails <- minerDetails[["perWorkerStats"]]
+        workerDetails$Miner <- m
+        workerDetails$Timestamp <- Sys.time()
+        workerList[[workersFound]] <- workerDetails
+        workersFound <- workersFound + 1
+      }
+      if(length(minerDetails[["payments"]])>0){
+        minerPayments <- process_paymentstring_xmrpool(minerDetails[["payments"]])
+        minerPayments$Miner <- m
+        minerPayments$Timestamp <- Sys.time()
+        payoutList[[payoutsFound]] <- minerPayments
+        payoutsFound <- payoutsFound + 1
+        while(TRUE){
+          minerPayments <- fromJSON(sprintf(PAYOUT_ENDPOINT, min(as.numeric(as.character(minerPayments$Date))), m))
+          Sys.sleep((60/RATE_LIMIT)+1)
+          if(length(minerPayments)==0){
+            break()
+          }
+          minerPayments <- process_paymentstring_xmrpool(minerDetails[["payments"]])
+          minerPayments$Miner <- m
+          minerPayments$Timestamp <- Sys.time()
+          payoutList[[payoutsFound]] <- minerPayments
+          payoutsFound <- payoutsFound + 1
+        }
+      }
+    }
+  }
+  
+  minerList <- bind_rows(minerList)
+  workerList <- bind_rows(workerList)
+  payoutList <- bind_rows(payoutList)
+  
+  if(nrow(workerList)>0){
+    workerList <- workerList[,c("workerId", "lastShare", "Miner", "Timestamp")]
+    workerList$Pool <- POOL_NAME
+    names(workerList)[c(1,2)] <- c("WorkerID", "LastShare")
+    # Fake UID for Workers
+    uids <- paste0(workerList$Miner, workerList$WorkerID, POOL_NAME)
+    uids <- abs(digest2int(uids))
+    if(sum(duplicated(uids))>0) stop("FATAL: Hash collision!")
+    uids <- uids + POOL_ID * 10^nchar(uids)
+    workerList$UID <- uids
+    workerList <- workerList[!workerList$UID %in% knownWorkers$UID,]
+  }
+  
+  payoutList$Date <- as.POSIXct(as.numeric(payoutList$Date), origin="1970-01-01", tz="GMT")
+  payoutList$Amount <- as.numeric(as.character(payoutList$Amount))/10^12
+  
+  payoutTransactions <- payoutList[,c("TxHash", "Date", "Mixin", "Timestamp")]
+  payouts <- payoutList[,c("TxHash", "Miner", "Amount")]
+  
+  knownMiners <- get_poolminers(POOL_NAME)
+  knownWorkers <- get_poolworkers(POOL_NAME)
+  knownPayoutTx <- get_poolpayouttx(POOL_NAME)
+  knownPayouts <- get_poolpayouts(POOL_NAME)
+  
+  minerList <- minerList[!minerList$Address %in% knownMiners$Address,]
+  payoutTransactions <- payoutTransactions[!payoutTransactions$TxHash %in% knownPayoutTx$TxHash]
+  payouts <- payouts[!paste0(payouts$TxHash,payouts$Miner) %in% paste0(knownPayouts$TxHash, knownPayouts$Miner)]
+  
+  if(nrow(minerList)>0){
+    mysql_fast_db_write_table(con, "miner",minerList, append = TRUE)
+  }
+  
+  if(nrow(workerList)>0){
+    mysql_fast_db_write_table(con, "worker",workerList, append = TRUE)
+  }
+  
+  if(nrow(payoutTransactions)>0){
+    mysql_fast_db_write_table(con, "payouttransaction",payoutTransactions, append = TRUE)
+  }
+  
+  if(nrow(payouts)>0){
+    mysql_fast_db_write_table(con, "payout",minerList, append = TRUE)
+  }
+}
 
 dbDisconnect(con)
 
