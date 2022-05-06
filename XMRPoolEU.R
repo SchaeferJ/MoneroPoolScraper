@@ -132,7 +132,7 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
         while(TRUE){
           minerPayments <- fromJSON(sprintf(PAYOUT_ENDPOINT, min(as.numeric(as.character(minerPayments$Date))), m))
           Sys.sleep((60/RATE_LIMIT)+1)
-          if(length(payoutDetails)==0){
+          if(length(minerPayments)==0){
             break()
           }
           minerPayments <- process_paymentstring_xmrpool(minerDetails[["payments"]])
