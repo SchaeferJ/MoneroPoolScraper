@@ -73,94 +73,94 @@ rows <- get_poolminers(POOL_NAME)
 miners <- miners[!miners %in% rows$Address]
 
 # Step 4: Retrieve Miner Details:
-
-minerList <- list()
-workerList <- list()
-i <- 1
-pb <- txtProgressBar(max=length(miners), style = 3)
-for(m in miners){
-  minerDetails <- fromJSON(paste0(MINERDETAILs_ENDPOINT,m))
-  minerDetails <- minerDetails["data"][[1]]
-  minerWorkers <- minerDetails["workers"][[1]]
-  minerDetails <- data.frame(minerDetails[1:5])
-  minerDetails$Pool <- POOL_NAME
-  minerDetails$Timestamp <- Sys.time()
-  if(length(minerWorkers)>0){
-    minerWorkers$Pool <- POOL_NAME
-    minerWorkers$Miner <- m
-    minerWorkers$Timestamp <- Sys.time()
-    workerList[[i]] <- minerWorkers
+if(length(miners)>0){
+  minerList <- list()
+  workerList <- list()
+  i <- 1
+  pb <- txtProgressBar(max=length(miners), style = 3)
+  for(m in miners){
+    minerDetails <- fromJSON(paste0(MINERDETAILs_ENDPOINT,m))
+    minerDetails <- minerDetails["data"][[1]]
+    minerWorkers <- minerDetails["workers"][[1]]
+    minerDetails <- data.frame(minerDetails[1:5])
+    minerDetails$Pool <- POOL_NAME
+    minerDetails$Timestamp <- Sys.time()
+    if(length(minerWorkers)>0){
+      minerWorkers$Pool <- POOL_NAME
+      minerWorkers$Miner <- m
+      minerWorkers$Timestamp <- Sys.time()
+      workerList[[i]] <- minerWorkers
+    }
+    minerList[[i]] <- minerDetails
+    # Rate Limiter
+    Sys.sleep((60/RATE_LIMIT)+1)
+    setTxtProgressBar(pb, i)
+    i <- i+1
   }
-  minerList[[i]] <- minerDetails
-  # Rate Limiter
-  Sys.sleep((60/RATE_LIMIT)+1)
-  setTxtProgressBar(pb, i)
-  i <- i+1
-}
-
-minerList <- bind_rows(minerList)
-names(minerList)[1:9] <- c("Address","UncoBalance","Balance","Hashrate","H1","H3","H6","H12","H24")
-workerList <- bind_rows(workerList)
-names(workerList)[1:10] <- c("WorkerID","UID","Hashrate","LastShare","Rating","H1","H3","H6","H12","H24")
-workerList$LastShare <- as.POSIXct(workerList$LastShare, origin="1970-01-01", tz="GMT")
-
-# Batch-Write retrieved Data to Database
-mysql_fast_db_write_table(con, "miner",minerList, append = TRUE)
-mysql_fast_db_write_table(con, "worker",workerList, append = TRUE)
-
-# Step 5: Retrieve Historic Hashrates
-rm(pb, i, m, minerDetails, minerWorkers)
-
-hashList <- list()
-i <- 1
-pb <- txtProgressBar(max=length(miners), style = 3)
-for(m in miners){
-  hashHistory <- fromJSON(paste0(HASHHISTORY_ENDPOINT,m))
-  hashHistory <- hashHistory["data"][[1]]
-  if(length(hashHistory)>0){
-  hashHistory$date <- as.POSIXct(hashHistory$date, origin="1970-01-01", tz="GMT")
-  hashHistory$Miner <- m
-  hashHistory$Timestamp <- Sys.time()
+  
+  minerList <- bind_rows(minerList)
+  names(minerList)[1:9] <- c("Address","UncoBalance","Balance","Hashrate","H1","H3","H6","H12","H24")
+  workerList <- bind_rows(workerList)
+  names(workerList)[1:10] <- c("WorkerID","UID","Hashrate","LastShare","Rating","H1","H3","H6","H12","H24")
+  workerList$LastShare <- as.POSIXct(workerList$LastShare, origin="1970-01-01", tz="GMT")
+  
+  # Batch-Write retrieved Data to Database
+  mysql_fast_db_write_table(con, "miner",minerList, append = TRUE)
+  mysql_fast_db_write_table(con, "worker",workerList, append = TRUE)
+  
+  # Step 5: Retrieve Historic Hashrates
+  rm(pb, i, m, minerDetails, minerWorkers)
+  
+  hashList <- list()
+  i <- 1
+  pb <- txtProgressBar(max=length(miners), style = 3)
+  for(m in miners){
+    hashHistory <- fromJSON(paste0(HASHHISTORY_ENDPOINT,m))
+    hashHistory <- hashHistory["data"][[1]]
+    if(length(hashHistory)>0){
+      hashHistory$date <- as.POSIXct(hashHistory$date, origin="1970-01-01", tz="GMT")
+      hashHistory$Miner <- m
+      hashHistory$Timestamp <- Sys.time()
+    }
+    hashList[[i]] <- hashHistory
+    # Rate Limiter
+    Sys.sleep((60/RATE_LIMIT)+1)
+    setTxtProgressBar(pb, i)
+    i <- i+1
   }
-  hashList[[i]] <- hashHistory
-  # Rate Limiter
-  Sys.sleep((60/RATE_LIMIT)+1)
-  setTxtProgressBar(pb, i)
-  i <- i+1
-}
-
-hashList <- bind_rows(hashList)
-names(hashList)[1:2] <- c("RefTime", "Hashrate")
-mysql_fast_db_write_table(con, "hashrate",hashList, append = TRUE)
-
-
-# Step 5: Retrieve Historic Sharerates
-rm(pb, i, m)
-
-shareList <- list()
-i <- 1
-pb <- txtProgressBar(max=length(miners), style = 3)
-for(m in miners){
-  shareHistory <- fromJSON(paste0(SHAREHISTORY_ENDPOINT,m))
-  shareHistory <- shareHistory["data"][[1]]
-  if(length(shareHistory)>0){
-    shareHistory$Miner <- m
-    shareHistory$Timestamp <- Sys.time()
-    shareList[[i]] <- shareHistory
+  
+  hashList <- bind_rows(hashList)
+  names(hashList)[1:2] <- c("RefTime", "Hashrate")
+  mysql_fast_db_write_table(con, "hashrate",hashList, append = TRUE)
+  
+  
+  # Step 5: Retrieve Historic Sharerates
+  rm(pb, i, m)
+  
+  shareList <- list()
+  i <- 1
+  pb <- txtProgressBar(max=length(miners), style = 3)
+  for(m in miners){
+    shareHistory <- fromJSON(paste0(SHAREHISTORY_ENDPOINT,m))
+    shareHistory <- shareHistory["data"][[1]]
+    if(length(shareHistory)>0){
+      shareHistory$Miner <- m
+      shareHistory$Timestamp <- Sys.time()
+      shareList[[i]] <- shareHistory
+    }
+    # Rate Limiter
+    Sys.sleep((60/RATE_LIMIT)+1)
+    setTxtProgressBar(pb, i)
+    i <- i+1
   }
-  # Rate Limiter
-  Sys.sleep((60/RATE_LIMIT)+1)
-  setTxtProgressBar(pb, i)
-  i <- i+1
+  
+  
+  shareList <- bind_rows(shareList)
+  shareList$date <- as.POSIXct(shareList$date, origin="1970-01-01", tz = "GMT")
+  names(shareList)[1:2] <- c("RefTime", "Shares")
+  mysql_fast_db_write_table(con, "sharerate",shareList, append = TRUE)
+  rm(pb, i, m)
 }
-
-
-shareList <- bind_rows(shareList)
-shareList$date <- as.POSIXct(shareList$date, origin="1970-01-01", tz = "GMT")
-names(shareList)[1:2] <- c("RefTime", "Shares")
-mysql_fast_db_write_table(con, "sharerate",shareList, append = TRUE)
-rm(pb, i, m)
-
 # Step 6: Retrieve Payouts
 
 # Payments should be updated for all miners. Thus retrieve all known miners from the database
