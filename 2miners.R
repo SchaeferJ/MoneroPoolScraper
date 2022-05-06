@@ -180,7 +180,7 @@ knownPayoutTx <- get_poolpayouttx(POOL_NAME)
 knownPayouts <- get_poolpayouts(POOL_NAME)
 
 minerList <- minerList[!minerList$Address %in% knownMiners$Address,]
-workerList <- workerList[!workerList$UID %in% as.numeric(knownWorkers$UID),]
+workerList <- workerList[!workerList$UID %in% as.numeric(as.character(knownWorkers$UID)),]
 hashList <- hashList[!paste0(hashList$RefTime, hashList$Miner) %in% paste0(knownHashes$RefTime, knownHashes$Miner),]
 payoutTransactions <- payoutTransactions[!payoutTransactions$TxHash %in% knownPayoutTx$TxHash,]
 paymentList <- paymentList[!paste0(paymentList$TxHash, paymentList$Miner) %in% paste0(knownPayouts$TxHash, knownPayouts$Miner),]
