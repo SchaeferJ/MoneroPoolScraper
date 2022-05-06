@@ -166,6 +166,8 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
     if(sum(duplicated(uids))>0) stop("FATAL: Hash collision!")
     uids <- uids + POOL_ID * 10^nchar(uids)
     workerList$UID <- uids
+    
+    knownWorkers <- get_poolworkers(POOL_NAME)
     workerList <- workerList[!workerList$UID %in% knownWorkers$UID,]
   }
   
@@ -176,7 +178,6 @@ if(weekdays(Sys.Date()) %in% c("Sunday", "Sonntag")){
   payouts <- payoutList[,c("TxHash", "Miner", "Amount")]
   
   knownMiners <- get_poolminers(POOL_NAME)
-  knownWorkers <- get_poolworkers(POOL_NAME)
   knownPayoutTx <- get_poolpayouttx(POOL_NAME)
   knownPayouts <- get_poolpayouts(POOL_NAME)
   
