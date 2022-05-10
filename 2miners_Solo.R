@@ -114,7 +114,7 @@ for(m in miners){
   minerList[[i]] <- data.frame(Address=m, Pool=POOL_NAME, Balance,
                      UncoBalance, Hashrate,
                      H1, TotalPayout,
-                     BlocksFound)
+                     BlocksFound, stringsAsFactors = FALSE)
   
   # Rate Limiter
   Sys.sleep((60/RATE_LIMIT)+1)
@@ -134,7 +134,7 @@ minerList$Timestamp <- Sys.time()
 workerList$offline <- NULL
 names(workerList) <- c("LastShare", "Hashrate", "H1", "WorkerID", "Miner", "Timestamp" )
 workerList$Pool <- POOL_NAME
-workerList$LastShare <- as.POSIXct(workerList$LastShare, origin="1970-01-01", tz="GMT")
+workerList$LastShare <- as.POSIXct(as.numeric(as.character(workerList$LastShare)), origin="1970-01-01", tz="GMT")
 # Fake UID for Workers
 uids <- paste0(workerList$Miner, workerList$WorkerID, POOL_NAME)
 uids <- abs(digest2int(uids))
@@ -143,12 +143,12 @@ uids <- uids + POOL_ID * 10^nchar(uids)
 workerList$UID <- uids
 
 
-hashList$x <- as.POSIXct(hashList$x, origin="1970-01-01", tz="GMT")
+hashList$x <- as.POSIXct(as.numeric(as.character(hashList$x)), origin="1970-01-01", tz="GMT")
 hashList$timeFormat <- NULL
 hashList$minerLargeHash <- NULL
 names(hashList) <- c("Hashrate", "WorkersOnline", "RefTime", "Miner", "Timestamp")
 
-payoutTransactions <- data.frame(TxHash = unique(paymentList$tx), Pool = POOL_NAME, Timestamp = Sys.time())
+payoutTransactions <- data.frame(TxHash = unique(paymentList$tx), Pool = POOL_NAME, Timestamp = Sys.time(), stringsAsFactors = FALSE)
 
 names(paymentList) <- c("Amount", "Timestamp", "TxHash", "Miner")
 paymentList$Amount <- paymentList$Amount/10^12
@@ -156,7 +156,7 @@ paymentList$Amount <- paymentList$Amount/10^12
 blockList$shares <- NULL
 blockList$orphan <- NULL
 blockList$currentLuck <- NULL
-blockList$timestamp <- as.POSIXct(blockList$timestamp, origin="1970-01-01", tz="GMT")
+blockList$timestamp <- as.POSIXct(as.numeric(as.character(blockList$timestamp)), origin="1970-01-01", tz="GMT")
 blockList$reward <- blockList$reward/10^12
 names(blockList) <- c("Height", "Date", "Difficulty", "Miner", "Hash", "Reward")
 blockList$Timestamp <- Sys.time()
