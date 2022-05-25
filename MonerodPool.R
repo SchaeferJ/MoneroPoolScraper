@@ -98,18 +98,19 @@ while(TRUE){
 }
 
 paymentList <- bind_rows(paymentList)
-paymentList$value <- paymentList$value/10^12
-
-paymentList$pool_type <- NULL
-paymentList$id <- NULL
-paymentList$fee <- paymentList$fee/10^12
-names(paymentList) <- c("TxHash", "Mixin", "Payees", "Fee", "Amount", "Date")
-paymentList$Pool <- POOL_NAME
-paymentList$Timestamp <- Sys.time()
-
-knownPayoutTx <- get_poolpayouttx(POOL_NAME)
-paymentList <- paymentList[!paymentList$TxHash %in% knownPayoutTx$TxHash,]
-
+if(nrow(paymentList)>0){
+  paymentList$value <- paymentList$value/10^12
+  
+  paymentList$pool_type <- NULL
+  paymentList$id <- NULL
+  paymentList$fee <- paymentList$fee/10^12
+  names(paymentList) <- c("TxHash", "Mixin", "Payees", "Fee", "Amount", "Date")
+  paymentList$Pool <- POOL_NAME
+  paymentList$Timestamp <- Sys.time()
+  
+  knownPayoutTx <- get_poolpayouttx(POOL_NAME)
+  paymentList <- paymentList[!paymentList$TxHash %in% knownPayoutTx$TxHash,]
+}
 if(nrow(paymentList)>0){
   mysql_fast_db_write_table(con, "payouttransaction",paymentList, append = TRUE)
 }
@@ -172,7 +173,7 @@ if(weekdays(Sys.Date()) %in% c("Sunday","Sonntag")){
   
   payouts <- paymentList[,c("TxHash","Miner","Amount","Timestamp")]
   
-
+  
   if(nrow(workerList)>0){
     
     workerList$Pool <- POOL_NAME

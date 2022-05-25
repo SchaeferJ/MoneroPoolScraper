@@ -49,9 +49,10 @@ blockList <- bind_rows(blockList)
 rm(minedBlocks, i, querySize)
 
 # Subset to blocks that are currently unknown
-blockList <- blockList[blockList$height>lastKnownBlock,]
-blockList <- blockList[blockList$unlocked & blockList$valid,]
-
+if(nrow(blockList)>0){
+  blockList <- blockList[blockList$height>lastKnownBlock,]
+  blockList <- blockList[blockList$unlocked & blockList$valid,]
+}
 if(nrow(blockList)>0){
   blockList <- blockList[,c("height", "hash", "value","diff","ts")]
   names(blockList) <- c("Height", "Hash", "Reward", "Difficulty", "Date")
@@ -87,10 +88,13 @@ while(TRUE){
   Sys.sleep((60/RATE_LIMIT)+1)
 }
 paymentList <- bind_rows(paymentList)
+if(nrow(paymentList)>0){
 paymentList <- paymentList[complete.cases(paymentList),]
+paymentList <- paymentList[paymentList$ts >= lastKnownPayout,]
+
+}
 rm(payment, i, querySize)
 
-paymentList <- paymentList[paymentList$ts >= lastKnownPayout,]
 if(nrow(paymentList)>0){
   paymentList <- paymentList[,c("hash","ts","fee","payees","value","mixins")]
   paymentList$Pool <- POOL_NAME
