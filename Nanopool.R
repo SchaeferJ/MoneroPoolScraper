@@ -5,7 +5,7 @@ library(dplyr)
 library(R.utils)
 source("./DButils.R")
 
-con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero")
+con <- dbConnect(RMariaDB::MariaDB(), user=DB_USERNAME, password=DB_PW, dbname="monero", port=3307)
 
 # General Setup
 POOL_NAME <- "Nanopool"
@@ -83,6 +83,9 @@ if(length(miners)>0){
     minerDetails <- minerDetails["data"][[1]]
     minerWorkers <- minerDetails["workers"][[1]]
     minerDetails <- data.frame(minerDetails[1:5])
+    if(length(minerDetails)==0){
+      next()
+    }
     minerDetails$Pool <- POOL_NAME
     minerDetails$Timestamp <- Sys.time()
     if(length(minerWorkers)>0){
